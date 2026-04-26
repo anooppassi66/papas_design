@@ -16,7 +16,7 @@ const SLIDES = [
   },
   {
     id: 2,
-    image: ASSETS.cricketBats,
+    image: ASSETS.secondBanner,
     label: "Gray-Nicolls Cricket Bats",
     cta: "Shop Now",
     href: "/cricket/bats/gray-nicolls",
@@ -24,26 +24,10 @@ const SLIDES = [
   },
   {
     id: 3,
-    image: ASSETS.battingGloves,
+    image: ASSETS.thirdBanner,
     label: "Premium Batting Gloves",
     cta: "Shop Now",
     href: "/cricket/batting-equipment/gloves",
-    objectPosition: "center center",
-  },
-  {
-    id: 4,
-    image: ASSETS.helmets,
-    label: "Cricket Helmets — Stay Protected",
-    cta: "Explore",
-    href: "/cricket/helmets",
-    objectPosition: "center center",
-  },
-  {
-    id: 5,
-    image: ASSETS.adultShoes,
-    label: "Cricket Spikes & Shoes",
-    cta: "Shop Now",
-    href: "/cricket/shoes",
     objectPosition: "center center",
   },
 ];

@@ -1,7 +1,9 @@
 // ─── Image Asset URLs from Figma ───────────────────────────────────────────
 export const ASSETS = {
   logo: "https://www.figma.com/api/mcp/asset/fc9bf452-969c-4cbf-a38c-3f5a2eacc35a",
-  heroBanner: "https://www.figma.com/api/mcp/asset/e2c119ed-59bb-4b01-be43-0599d53a2ca7",
+  heroBanner: "/banner1.webp",
+  secondBanner : "/banner2.webp",
+  thirdBanner : "/banner3.webp",
   // Department images
   grayNicollsBats: "https://www.figma.com/api/mcp/asset/40afef8c-7b66-4f43-bb6a-7aab6c38ef91",
   cricketSpikes: "https://www.figma.com/api/mcp/asset/cb8a9319-a434-473a-997d-cde4992ef008",
