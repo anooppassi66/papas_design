@@ -1,0 +1,228 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Custom scrollbar hide utility ─────────────────────── */
+@layer utilities {
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ─── Base resets ────────────────────────────────────────── */
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Remove outline on non-keyboard focus */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  /* Smooth transitions on interactive elements */
+  a,
+  button {
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  /* Better image rendering */
+  img {
+    image-rendering: -webkit-optimize-contrast;
+  }
+}
+
+/* ─── Component utilities ────────────────────────────────── */
+@layer components {
+  /* Orange brand button */
+  .btn-primary {
+    @apply bg-[#f69a39] text-white font-medium text-[12px] tracking-[0.5px] uppercase px-6 py-3 rounded-[3px] hover:bg-[#e8880d] active:scale-[0.98] transition-all duration-200;
+  }
+
+  /* Ghost/outline button */
+  .btn-outline {
+    @apply border border-[#f69a39] text-[#f69a39] font-medium text-[12px] tracking-[0.5px] uppercase px-6 py-3 rounded-[3px] hover:bg-[#f69a39] hover:text-white transition-all duration-200;
+  }
+
+  /* Section heading */
+  .section-heading {
+    @apply text-[16px] md:text-[18px] font-semibold tracking-[0.36px] uppercase;
+  }
+
+  /* Underline link */
+  .link-underline {
+    @apply border-b border-current pb-0.5 hover:opacity-80 transition-opacity text-[11px] font-medium tracking-[0.45px] uppercase;
+  }
+
+  /* Product image container */
+  .product-image-wrapper {
+    @apply relative aspect-square overflow-hidden bg-[#f8f8f8] rounded-[3px];
+  }
+
+  /* Price tag */
+  .price-current {
+    @apply text-[#f69a39] font-semibold text-[14px];
+  }
+
+  .price-original {
+    @apply text-[#999] text-[12px] line-through;
+  }
+}
+
+/* ─── Navigation micro-interactions ─────────────────────── */
+.nav-link-hover {
+  position: relative;
+}
+
+.nav-link-hover::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: #f69a39;
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.2s ease;
+}
+
+.nav-link-hover:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+}
+
+/* ─── Mega menu dropdown (desktop) ──────────────────────── */
+.mega-menu-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-top: 2px solid #f69a39;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  z-index: 50;
+  padding: 2rem 3rem;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-8px);
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.mega-menu-trigger:hover .mega-menu-dropdown,
+.mega-menu-dropdown:hover {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* ─── Swiper / carousel fade edges ──────────────────────── */
+.carousel-fade-right {
+  -webkit-mask-image: linear-gradient(to right, black 80%, transparent 100%);
+  mask-image: linear-gradient(to right, black 80%, transparent 100%);
+}
+
+/* ─── Product card hover state ──────────────────────────── */
+.product-card-hover {
+  @apply transition-shadow duration-300;
+}
+
+.product-card-hover:hover {
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12);
+}
+
+/* ─── Image zoom on hover ───────────────────────────────── */
+.img-zoom img {
+  transition: transform 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.img-zoom:hover img {
+  transform: scale(1.05);
+}
+
+/* ─── Trust badge icons ─────────────────────────────────── */
+.trust-icon-wrapper {
+  @apply w-10 h-10 bg-white rounded-lg flex items-center justify-center shadow-sm flex-shrink-0;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08), 0 0 0 0.75px #dbdbdb;
+}
+
+/* ─── Announcement bar links ────────────────────────────── */
+.announcement-link {
+  @apply underline hover:no-underline transition-all text-[9px] md:text-[9.5px] font-medium text-white tracking-wide;
+}
+
+/* ─── Mobile sticky add-to-cart bar ─────────────────────── */
+.mobile-atc-bar {
+  @apply fixed bottom-0 left-0 right-0 bg-white border-t border-[#e5e5e5] p-3 flex items-center gap-3 z-50 md:hidden;
+  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.08);
+}
+
+/* ─── Content tile overlay effect ───────────────────────── */
+.content-tile-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(0,0,0,0.35) 0%,
+    rgba(0,0,0,0) 20%,
+    rgba(0,0,0,0) 70%,
+    rgba(0,0,0,0.60) 100%
+  );
+}
+
+/* ─── Skeleton loading states ───────────────────────────── */
+@keyframes skeleton-shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: calc(200px + 100%) 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e8e8e8 50%, #f0f0f0 75%);
+  background-size: 200px 100%;
+  animation: skeleton-shimmer 1.2s ease-in-out infinite;
+}
+
+/* ─── Page transitions ──────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.page-enter {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* ─── Custom select styling ─────────────────────────────── */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23666' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px !important;
+}
+
+/* ─── Quantity input ────────────────────────────────────── */
+.qty-input::-webkit-inner-spin-button,
+.qty-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.qty-input[type=number] {
+  -moz-appearance: textfield;
+}
