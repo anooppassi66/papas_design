@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import Image from 'next/image';
 
 export default function AboutSection() {
   const [expanded, setExpanded] = useState(false);
@@ -15,7 +16,7 @@ export default function AboutSection() {
               <div className="text-white text-[16px] tracking-[8px] font-light mt-1">WILLOW</div>
               <div className="mt-3 text-white/40 text-[11px] tracking-widest uppercase">Cricket Store</div>
             </div> */}
-            <img src="/assets/papas_cricket.png" alt="PAPAS Cricket" fill className="object-cover" />
+            <Image src="/assets/papas_cricket.png" alt="PAPAS Cricket" fill className="object-cover" />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20 pointer-events-none" />
           </div>
 
