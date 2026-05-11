@@ -47,12 +47,18 @@ export default function ContentTileGrid({ title, tiles, layout = "4col", dark = 
 function ContentTile({ tile, tall }: { tile: Tile; tall: boolean }) {
   return (
     <div className="relative group overflow-hidden rounded-[3px]" style={{ aspectRatio: tall ? "336/485" : "684/500" }}>
-      <Image
-        src={tile.image}
-        alt={tile.name}
-        fill
-        className="object-cover group-hover:scale-105 transition-transform duration-500"
-      />
+      {tile.image ? (
+        <Image
+          src={tile.image}
+          alt={tile.name}
+          fill
+          className="object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+      ) : (
+        <div className="w-full h-full bg-gradient-to-br from-[#1e1e21] to-[#333] flex items-center justify-center">
+          <span className="text-white/20 text-[11px] tracking-[2px] uppercase font-semibold">{tile.name}</span>
+        </div>
+      )}
       {/* Gradient */}
       <div
         className="absolute inset-0"

@@ -9,7 +9,7 @@ export default function AnnouncementBar() {
         </a>
         <div className="flex items-center gap-4 md:gap-6 mx-auto md:mx-0">
           <a href="/stores" className="underline hover:no-underline transition-all">Our Stores</a>
-          <a href="/blog" className="underline hover:no-underline transition-all">Cricket Blog</a>
+          <a href="/blogs/cricket" className="underline hover:no-underline transition-all">Cricket Blog</a>
         </div>
       </div>
     </div>

@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 108" fill="none">
+  <!-- Black background -->
+  <rect width="420" height="108" fill="#000000" rx="2"/>
+
+  <!-- ── Left section: PS geometric mark ── -->
+
+  <!-- "PASSION STRIKES WILLOW" vertical text on far left -->
+  <text transform="rotate(-90,10,54)" x="-82" y="16"
+    font-family="Arial,sans-serif" font-size="6.5" font-weight="700"
+    fill="#E8A020" letter-spacing="2.5">PASSION STRIKES WILLOW</text>
+
+  <!-- Geometric mark: layered diamond/kite shapes (3 rows) -->
+  <!-- Bottom row — two kites side by side -->
+  <polygon points="28,92 42,68 56,68 42,92" fill="#B87A00"/>
+  <polygon points="42,92 56,68 70,68 56,92" fill="#E8A020"/>
+  <polygon points="28,92 36,80 42,92" fill="#FFD060" opacity="0.35"/>
+
+  <!-- Middle row — two kites -->
+  <polygon points="34,68 48,44 62,44 48,68" fill="#B87A00"/>
+  <polygon points="48,68 62,44 76,44 62,68" fill="#E8A020"/>
+  <polygon points="34,68 42,56 48,68" fill="#FFD060" opacity="0.35"/>
+
+  <!-- Top peak — single kite -->
+  <polygon points="41,44 57,20 73,44" fill="#E8A020"/>
+  <polygon points="41,44 50,30 57,20" fill="#FFD060" opacity="0.35"/>
+
+  <!-- Phone line at bottom of left section -->
+  <!-- phone icon circle -->
+  <circle cx="24" cy="101" r="5" fill="#E8A020" opacity="0.9"/>
+  <text x="24" y="104" text-anchor="middle" font-family="Arial,sans-serif" font-size="6" fill="#000" font-weight="900">✆</text>
+  <text x="32" y="104" font-family="Arial,sans-serif" font-size="7.5" fill="#E8A020" letter-spacing="0.5">4093443513</text>
+
+  <!-- Divider -->
+  <line x1="90" y1="6" x2="90" y2="102" stroke="#2a2a2a" stroke-width="1"/>
+
+  <!-- ── Right section: PAPAS ── -->
+
+  <!-- Cricket bat — behind the text, rotated -->
+  <g transform="translate(362,4) rotate(8)">
+    <!-- Handle -->
+    <rect x="6" y="0" width="8" height="28" rx="3" fill="#6B3A1F"/>
+    <!-- Grip bands -->
+    <rect x="6" y="4"  width="8" height="2.5" rx="1" fill="#3a1f0d" opacity="0.6"/>
+    <rect x="6" y="10" width="8" height="2.5" rx="1" fill="#3a1f0d" opacity="0.6"/>
+    <rect x="6" y="16" width="8" height="2.5" rx="1" fill="#3a1f0d" opacity="0.6"/>
+    <!-- Blade -->
+    <rect x="2" y="26" width="16" height="66" rx="5" fill="#C87820"/>
+    <!-- Edge highlight -->
+    <rect x="2" y="26" width="5" height="66" rx="5" fill="#E8A030" opacity="0.5"/>
+    <!-- Toe -->
+    <ellipse cx="10" cy="92" rx="8" ry="4" fill="#B06010"/>
+  </g>
+
+  <!-- PAPAS text: P A P  [ball] S -->
+  <!-- "PAP" -->
+  <text x="97" y="84"
+    font-family="'Arial Black','Franklin Gothic Heavy','Impact',sans-serif"
+    font-size="72" font-weight="900" fill="white" letter-spacing="-3">PAP</text>
+
+  <!-- Cricket ball replacing the 4th letter (A) -->
+  <!-- Position: after "PAP" at ~x=270, centred at y≈52 -->
+  <!-- White circle -->
+  <circle cx="283" cy="52" r="22" fill="white"/>
+  <!-- Seam lines (red) -->
+  <path d="M261,52 Q273,34 295,52" stroke="#c0392b" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M261,52 Q273,70 295,52" stroke="#c0392b" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M273,34 Q260,52 273,70" stroke="#c0392b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  <path d="M293,34 Q306,52 293,70" stroke="#c0392b" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+
+  <!-- "S" after the ball -->
+  <text x="305" y="84"
+    font-family="'Arial Black','Franklin Gothic Heavy','Impact',sans-serif"
+    font-size="72" font-weight="900" fill="white" letter-spacing="-3">S</text>
+
+  <!-- WILLOW CRICKET STORE -->
+  <text x="99" y="101"
+    font-family="Arial,sans-serif"
+    font-size="11.5" font-weight="600" fill="white" letter-spacing="5.5">WILLOW CRICKET STORE</text>
+</svg>

@@ -1,7 +1,5 @@
 "use client";
-import Image from "next/image";
 import { useState } from "react";
-import { ASSETS } from "@/lib/data";
 
 export default function AboutSection() {
   const [expanded, setExpanded] = useState(false);
@@ -10,21 +8,21 @@ export default function AboutSection() {
     <section className="bg-black py-10 md:py-14">
       <div className="max-w-[1440px] mx-auto px-4 md:px-10">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-          {/* Image */}
-          <div className="overflow-hidden rounded-[3px]">
-            <Image
-              src={ASSETS.brandImage}
-              alt="PAPAS Cricket"
-              width={713}
-              height={259}
-              className="w-full h-[200px] md:h-[260px] object-cover"
-            />
+          {/* Brand image / placeholder */}
+          <div className="overflow-hidden rounded-[3px] w-full h-[200px] md:h-[260px] bg-gradient-to-br from-[#1a1a1a] via-[#2a2a2a] to-[#111] flex items-center justify-center relative">
+            {/* <div className="text-center">
+              <div className="text-[#f69a39] text-[48px] font-black tracking-widest leading-none">PAPAS</div>
+              <div className="text-white text-[16px] tracking-[8px] font-light mt-1">WILLOW</div>
+              <div className="mt-3 text-white/40 text-[11px] tracking-widest uppercase">Cricket Store</div>
+            </div> */}
+            <img src="/assets/papas_cricket.png" alt="PAPAS Cricket" fill className="object-cover" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent to-black/20 pointer-events-none" />
           </div>
 
           {/* Text */}
           <div>
             <h2 className="text-white text-[14px] md:text-[16px] font-semibold tracking-[0.36px] uppercase mb-4">
-              PAPAS Cricket
+              PAPAS 
             </h2>
 
             <div className={`overflow-hidden transition-all duration-400 ${expanded ? "max-h-[600px]" : "max-h-[120px]"}`}>

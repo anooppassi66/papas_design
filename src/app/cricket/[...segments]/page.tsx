@@ -2,25 +2,22 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useSearchParams } from "next/navigation";
+import { useParams } from "next/navigation";
 import { UPLOADS } from "@/lib/customerApi";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
 
-interface Product {
-  id: number; name: string; slug: string; image: string | null;
-  brand_name: string; sell_price: number; min_offer_price: number | null; avg_rating: number; rating_count: number; link: string;
-}
+interface Product { id: number; name: string; slug: string; image: string | null; brand_name: string; sell_price: number; avg_rating: number; rating_count: number; }
 interface Brand { id: number; brand_name: string; }
 interface PriceRange { label: string; min: number; max: number; }
 interface Category { id: number; name: string; slug: string; children: { id: number; name: string; slug: string }[]; }
 
 const SORT_OPTIONS = [
-  { value: "newest",     label: "Newest" },
-  { value: "featured",   label: "Featured" },
-  { value: "price_asc",  label: "Price: Low to High" },
-  { value: "price_desc", label: "Price: High to Low" },
-  { value: "top_rated",  label: "Top Rated" },
+  { value: "newest",    label: "Newest" },
+  { value: "featured",  label: "Featured" },
+  { value: "price_asc", label: "Price: Low to High" },
+  { value: "price_desc",label: "Price: High to Low" },
+  { value: "top_rated", label: "Top Rated" },
 ];
 
 function Stars({ rating }: { rating: number }) {
@@ -35,55 +32,27 @@ function Stars({ rating }: { rating: number }) {
   );
 }
 
-function ProductCard({ product }: { product: Product }) {
-  const imgSrc = product.image
-    ? (product.image.startsWith("/uploads/") ? `${UPLOADS}${product.image}` : product.image)
-    : null;
-  return (
-    <Link href={`/products/${product.slug}`} className="bg-white rounded-[4px] border border-[#e8e8e8] hover:border-[#f69a39] hover:shadow-md transition-all group block">
-      <div className="relative w-full aspect-square bg-[#f8f8f8] rounded-t-[4px] overflow-hidden">
-        {imgSrc
-          ? <Image src={imgSrc} alt={product.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width:768px) 50vw, 25vw" />
-          : <div className="w-full h-full flex items-center justify-center text-[#ddd] text-4xl">🏏</div>
-        }
-      </div>
-      <div className="p-3">
-        <p className="text-[10px] text-[#f69a39] font-semibold uppercase tracking-wide mb-0.5">{product.brand_name}</p>
-        <h3 className="text-[12px] font-medium text-[#1e1e21] leading-snug line-clamp-2 mb-1.5">{product.name}</h3>
-        <div className="flex items-center gap-1 mb-2">
-          <Stars rating={product.avg_rating} />
-          <span className="text-[10px] text-[#aaa]">({product.rating_count})</span>
-        </div>
-        {product.min_offer_price ? (
-          <div className="flex items-baseline gap-1.5 flex-wrap">
-            <span className="text-[#f69a39] font-bold text-[15px]">${Number(product.min_offer_price).toFixed(2)}</span>
-            <span className="text-[12px] text-[#aaa] line-through">${Number(product.sell_price || 0).toFixed(2)}</span>
-            <span className="text-[9px] font-bold bg-red-500 text-white px-1.5 py-0.5 rounded-full">
-              {Math.round((1 - product.min_offer_price / product.sell_price) * 100)}% OFF
-            </span>
-          </div>
-        ) : (
-          <p className="text-[#f69a39] font-bold text-[15px]">${Number(product.sell_price || 0).toFixed(2)}</p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
 function FilterSection({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(true);
   return (
     <div className="border-b border-[#f0f0f0] pb-4 mb-1">
       <button onClick={() => setOpen(!open)} className="flex items-center justify-between w-full py-3">
         <span className="text-[11px] font-semibold text-[#1e1e21] uppercase tracking-[0.5px]">{title}</span>
-        <svg className={`w-3.5 h-3.5 text-[#999] transition-transform duration-200 ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" /></svg>
+        <svg className={`w-3.5 h-3.5 text-[#999] transition-transform duration-200 ${open ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
       </button>
       {open && <div className="flex flex-col gap-1.5">{children}</div>}
     </div>
   );
 }
 
-export default function ProductsPage() {
+export default function CategoryPage() {
+  const params = useParams();
+  const segments = (params?.segments as string[]) || [];
+  const permalink = segments.join("/");
+  const categoryName = segments[segments.length - 1]?.replace(/-/g, " ") || "Products";
+
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -95,19 +64,16 @@ export default function ProductsPage() {
   const [priceRanges, setPriceRanges] = useState<PriceRange[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
 
-  const searchParams = useSearchParams();
-
   const [sortBy, setSortBy] = useState("newest");
   const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
   const [selectedPrice, setSelectedPrice] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState(searchParams?.get("q") || "");
+  const [searchQuery, setSearchQuery] = useState("");
   const [filterOpen, setFilterOpen] = useState(false);
   const [gridCols, setGridCols] = useState<3 | 4>(4);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
   const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Load filters once
   useEffect(() => {
     fetch(`${API}/customer/products/filters`)
       .then((r) => r.json())
@@ -120,18 +86,18 @@ export default function ProductsPage() {
   }, []);
 
   const buildQuery = useCallback((pg: number) => {
-    const params = new URLSearchParams({ sort: sortBy, page: String(pg), limit: "8" });
-    if (searchQuery.trim()) params.set("q", searchQuery.trim());
-    if (selectedBrands.length) params.set("brand_ids", selectedBrands.join(","));
+    const p = new URLSearchParams({ permalink, sort: sortBy, page: String(pg), limit: "8" });
+    if (searchQuery.trim()) p.set("q", searchQuery.trim());
+    if (selectedBrands.length) p.set("brand_ids", selectedBrands.join(","));
     if (selectedPrice !== null && priceRanges[selectedPrice]) {
       const r = priceRanges[selectedPrice];
-      params.set("price_min", String(r.min));
-      if (r.max < 99999) params.set("price_max", String(r.max));
+      p.set("price_min", String(r.min));
+      if (r.max < 99999) p.set("price_max", String(r.max));
     }
-    return params.toString();
-  }, [sortBy, searchQuery, selectedBrands, selectedPrice, priceRanges]);
+    return p.toString();
+  }, [permalink, sortBy, searchQuery, selectedBrands, selectedPrice, priceRanges]);
 
-  const loadProducts = useCallback(async (pg: number, append = false) => {
+  const load = useCallback(async (pg: number, append = false) => {
     if (pg === 1) setLoading(true); else setLoadingMore(true);
     try {
       const res = await fetch(`${API}/customer/products?${buildQuery(pg)}`);
@@ -144,10 +110,7 @@ export default function ProductsPage() {
     finally { setLoading(false); setLoadingMore(false); }
   }, [buildQuery]);
 
-  // Reset to page 1 when filters/sort change
-  useEffect(() => {
-    loadProducts(1, false);
-  }, [loadProducts]);
+  useEffect(() => { load(1, false); }, [load]);
 
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
@@ -166,15 +129,31 @@ export default function ProductsPage() {
     return () => { document.body.style.overflow = ""; };
   }, [filterOpen]);
 
+  const breadcrumbs = [
+    { label: "Home", href: "/" },
+    { label: "Cricket", href: "/cricket" },
+    ...segments.map((seg, i) => ({
+      label: seg.replace(/-/g, " "),
+      href: `/cricket/${segments.slice(0, i + 1).join("/")}`,
+    })),
+  ];
+
   return (
     <div className="bg-[#f4f4f4] min-h-screen">
       <div className="bg-black">
-        <div className="max-w-[1440px] mx-auto px-4 md:px-10 py-3 flex items-center gap-2 text-[11px] text-[#888]">
-          <Link href="/" className="hover:text-[#f69a39] transition-colors">Home</Link>
-          <span>/</span><span className="text-white">All Products</span>
+        <div className="max-w-[1440px] mx-auto px-4 md:px-10 py-3 flex items-center gap-2 text-[11px] text-[#888] flex-wrap">
+          {breadcrumbs.map((b, i) => (
+            <span key={i} className="flex items-center gap-2">
+              {i < breadcrumbs.length - 1
+                ? <Link href={b.href} className="hover:text-[#f69a39] transition-colors capitalize">{b.label}</Link>
+                : <span className="text-white capitalize">{b.label}</span>
+              }
+              {i < breadcrumbs.length - 1 && <span>/</span>}
+            </span>
+          ))}
         </div>
         <div className="max-w-[1440px] mx-auto px-4 md:px-10 pb-8 pt-4">
-          <h1 className="text-white text-[26px] md:text-[36px] font-semibold uppercase tracking-[0.5px]">Cricket Equipment</h1>
+          <h1 className="text-white text-[26px] md:text-[36px] font-semibold uppercase tracking-[0.5px] capitalize">{categoryName}</h1>
           <p className="text-[#888] text-[13px] mt-1">{total} products</p>
         </div>
       </div>
@@ -205,6 +184,7 @@ export default function ProductsPage() {
 
       <div className="max-w-[1440px] mx-auto px-4 md:px-10 py-5">
         <div className="flex gap-5">
+
           {/* Sidebar */}
           <aside className={`md:block ${filterOpen ? "block" : "hidden"} fixed md:static inset-0 md:inset-auto z-50 md:z-auto`}>
             <div className="absolute inset-0 bg-black/60 md:hidden" onClick={() => setFilterOpen(false)} />
@@ -224,6 +204,7 @@ export default function ProductsPage() {
                     <input value={searchQuery} onChange={(e) => handleSearchChange(e.target.value)} placeholder="Search products..." className="w-full pl-8 pr-3 py-2 text-[12px] border border-[#e5e5e5] rounded-[3px] outline-none focus:border-[#f69a39] bg-[#fafafa]" />
                   </div>
                 </div>
+
                 {brands.length > 0 && (
                   <FilterSection title="Brand">
                     {brands.map((b) => (
@@ -237,6 +218,7 @@ export default function ProductsPage() {
                     ))}
                   </FilterSection>
                 )}
+
                 {priceRanges.length > 0 && (
                   <FilterSection title="Price Range">
                     {priceRanges.map((r, idx) => (
@@ -250,6 +232,7 @@ export default function ProductsPage() {
                     ))}
                   </FilterSection>
                 )}
+
                 {categories.length > 0 && (
                   <FilterSection title="Category">
                     {categories.flatMap((cat) => [
@@ -260,8 +243,11 @@ export default function ProductsPage() {
                     ])}
                   </FilterSection>
                 )}
+
                 {hasFilters && (
-                  <button onClick={clearAll} className="w-full mt-3 py-2.5 border border-[#f69a39] text-[#f69a39] text-[12px] font-semibold rounded-[3px] hover:bg-[#f69a39] hover:text-white transition-all">Clear All Filters</button>
+                  <button onClick={clearAll} className="w-full mt-3 py-2.5 border border-[#f69a39] text-[#f69a39] text-[12px] font-semibold rounded-[3px] hover:bg-[#f69a39] hover:text-white transition-all">
+                    Clear All Filters
+                  </button>
                 )}
               </div>
             </div>
@@ -319,7 +305,10 @@ export default function ProductsPage() {
                 <svg className="w-12 h-12 text-[#ccc] mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                 <p className="text-[#888] text-[14px] mb-1">No products found</p>
                 <p className="text-[#bbb] text-[12px] mb-5">Try adjusting your filters or search term</p>
-                {hasFilters && <button onClick={clearAll} className="px-6 py-2.5 bg-[#f69a39] text-white text-[12px] font-semibold rounded-[3px] hover:bg-[#e8880d] transition-colors">Clear Filters</button>}
+                {hasFilters
+                  ? <button onClick={clearAll} className="px-6 py-2.5 bg-[#f69a39] text-white text-[12px] font-semibold rounded-[3px] hover:bg-[#e8880d] transition-colors">Clear Filters</button>
+                  : <Link href="/products" className="text-[#f69a39] text-[13px] underline">Browse all products</Link>
+                }
               </div>
             ) : viewMode === "list" ? (
               <div className="space-y-3">
@@ -333,7 +322,7 @@ export default function ProductsPage() {
                       <div className="flex-1 min-w-0">
                         <p className="text-[10px] text-[#f69a39] font-semibold uppercase tracking-wide">{p.brand_name}</p>
                         <h3 className="text-[13px] font-medium text-[#1e1e21] leading-snug mt-0.5 line-clamp-2">{p.name}</h3>
-                        <div className="flex items-center gap-1 mt-1"><Stars rating={p.avg_rating} /><span className="text-[10px] text-[#aaa] ml-1">({p.rating_count})</span></div>
+                        <div className="flex items-center gap-1 mt-1"><Stars rating={p.avg_rating} /></div>
                       </div>
                       <p className="text-[#f69a39] font-bold text-[16px] flex-shrink-0">${Number(p.sell_price || 0).toFixed(2)}</p>
                     </Link>
@@ -342,14 +331,32 @@ export default function ProductsPage() {
               </div>
             ) : (
               <div className={`grid grid-cols-2 gap-3 md:gap-3.5 ${gridCols === 4 ? "md:grid-cols-4" : "md:grid-cols-3"}`}>
-                {products.map((p) => <ProductCard key={p.id} product={p} />)}
+                {products.map((p) => {
+                  const imgSrc = p.image ? (p.image.startsWith("/uploads/") ? `${UPLOADS}${p.image}` : p.image) : null;
+                  return (
+                    <Link key={p.id} href={`/products/${p.slug}`} className="bg-white rounded-[4px] border border-[#e8e8e8] hover:border-[#f69a39] hover:shadow-md transition-all group block">
+                      <div className="relative w-full aspect-square bg-[#f8f8f8] rounded-t-[4px] overflow-hidden">
+                        {imgSrc
+                          ? <Image src={imgSrc} alt={p.name} fill className="object-cover group-hover:scale-105 transition-transform duration-300" sizes="(max-width:768px) 50vw, 25vw" />
+                          : <div className="w-full h-full flex items-center justify-center text-[#ddd] text-4xl">🏏</div>
+                        }
+                      </div>
+                      <div className="p-3">
+                        <p className="text-[10px] text-[#f69a39] font-semibold uppercase tracking-wide mb-0.5">{p.brand_name}</p>
+                        <h3 className="text-[12px] font-medium text-[#1e1e21] leading-snug line-clamp-2 mb-1.5">{p.name}</h3>
+                        <Stars rating={p.avg_rating} />
+                        <p className="text-[#f69a39] font-bold text-[15px] mt-1.5">${Number(p.sell_price || 0).toFixed(2)}</p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
             )}
 
-            {(hasMore || loadingMore) && (
+            {(hasMore || loadingMore) && !loading && (
               <div className="mt-8 text-center">
                 <p className="text-[12px] text-[#aaa] mb-3">Showing {products.length} of {total} products</p>
-                <button onClick={() => loadProducts(page + 1, true)} disabled={loadingMore}
+                <button onClick={() => load(page + 1, true)} disabled={loadingMore}
                   className="px-8 py-3 border-2 border-[#1e1e21] text-[#1e1e21] text-[12px] font-semibold uppercase tracking-[0.5px] rounded-[3px] hover:bg-[#1e1e21] hover:text-white transition-all disabled:opacity-50">
                   {loadingMore ? "Loading…" : "Load More"}
                 </button>

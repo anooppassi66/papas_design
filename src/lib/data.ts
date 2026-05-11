@@ -1,48 +1,21 @@
-// ─── Image Asset URLs from Figma ───────────────────────────────────────────
+// ─── Image Asset URLs ───────────────────────────────────────────────────────
 export const ASSETS = {
-  logo: "https://www.figma.com/api/mcp/asset/fc9bf452-969c-4cbf-a38c-3f5a2eacc35a",
+  logo: "/assets/logo.png",
   heroBanner: "/banner1.webp",
-  secondBanner : "/banner2.webp",
-  thirdBanner : "/banner3.webp",
-  // Department images
-  grayNicollsBats: "https://www.figma.com/api/mcp/asset/40afef8c-7b66-4f43-bb6a-7aab6c38ef91",
-  cricketSpikes: "https://www.figma.com/api/mcp/asset/cb8a9319-a434-473a-997d-cde4992ef008",
-  adidasShoes: "https://www.figma.com/api/mcp/asset/ffdcae4f-3cd7-477a-87c9-e855e12f1342",
-  thighPads: "https://www.figma.com/api/mcp/asset/459a627b-2d45-4daf-8758-1a575e26fcd3",
-  accessories: "https://www.figma.com/api/mcp/asset/f9a2fd37-a2cc-449d-b4c0-a982b3fe7b86",
-  abdoGuards: "https://www.figma.com/api/mcp/asset/f64f0254-5309-461c-a4ba-8bc3e4468057",
-  matchBalls: "https://www.figma.com/api/mcp/asset/a4f3164e-99bd-4bda-b526-e00230a3044b",
-  // Essentials
-  cricketBats: "https://www.figma.com/api/mcp/asset/201a1b4e-ebae-4e56-8529-91d1f2f06a12",
-  battingPads: "https://www.figma.com/api/mcp/asset/47190bf7-dfd2-43b1-8131-8994288636f2",
-  battingGloves: "https://www.figma.com/api/mcp/asset/41f8d63a-e01f-45b3-a0cc-7ee586077761",
-  helmets: "https://www.figma.com/api/mcp/asset/c2021b98-74bd-4192-9d4c-e731f1adb8f6",
-  // Shoes
-  adultShoes: "https://www.figma.com/api/mcp/asset/deb83455-11d4-4c51-a52d-381c0cc99965",
-  kidsShoes: "https://www.figma.com/api/mcp/asset/67d0ce93-1321-41b8-834c-565843a8193f",
-  // Other departments
-  wicketKeeping: "https://www.figma.com/api/mcp/asset/4a1c4244-e894-4fe3-b602-dde79cf6d8be",
-  personalProtection: "https://www.figma.com/api/mcp/asset/08c0d347-cd1d-45ed-be6f-db9ba6779a19",
-  bagsLuggage: "https://www.figma.com/api/mcp/asset/1973b8c7-0e27-45f2-975f-c29da67a1caf",
-  balls: "https://www.figma.com/api/mcp/asset/d0ae53a0-a417-4718-a27a-f956a5a25317",
-  clothing: "https://www.figma.com/api/mcp/asset/f4108bd6-0d1b-4d43-af17-503ac497ed06",
-  // Brand section
-  brandImage: "https://www.figma.com/api/mcp/asset/762239e0-a5e8-43ed-b6c9-b9d9c8dde036",
-  // Trust icons
-  trustpilot: "https://www.figma.com/api/mcp/asset/a08ab14b-1646-4313-b3fa-6b27cdd181a1",
-  returnsIcon: "https://www.figma.com/api/mcp/asset/80ab5a5a-8930-4515-8c96-5c7cc634bd99",
-  genuineIcon: "https://www.figma.com/api/mcp/asset/1b91d5a8-acd8-4c9c-90e1-6aecc6d3e671",
-  shippingIcon: "https://www.figma.com/api/mcp/asset/2ab7a60f-3336-4fdb-96de-92972bccc7fb",
-  partnerIcon: "https://www.figma.com/api/mcp/asset/8c43fbaf-ff26-47b5-8732-5c027ba87fd9",
-  // Products
-  batProduct: "https://www.figma.com/api/mcp/asset/aaa4fbb2-9aba-4bfa-a1d6-113eeab8a937",
-  glovesProduct: "https://www.figma.com/api/mcp/asset/bdd0dbb6-095d-4fce-b79f-cdabf8c5443c",
-  padsProduct: "https://www.figma.com/api/mcp/asset/b2a8ec85-bdb0-4b7c-b624-d98755d1bf7d",
-  bagProduct: "https://www.figma.com/api/mcp/asset/49014fc2-c139-44b3-b39e-19d67659e747",
-  // Player/lifestyle
-  playerImage: "https://www.figma.com/api/mcp/asset/f3a021b3-9158-46c6-88e7-a0c5ea09b069",
-  socialImage: "https://www.figma.com/api/mcp/asset/2585e4ea-6b81-4e66-887c-ad1ee0efd9b3",
-  giftCard: "https://www.figma.com/api/mcp/asset/8eaf3db5-9eb9-4dbb-a8de-c31bd5851fe0",
+  secondBanner: "/banner2.webp",
+  thirdBanner: "/banner3.webp",
+  giftCard: "/assets/gift-card.svg",
+  // Photographic images — replace these files in /public/assets/ with real images
+  brandImage: "",
+  playerImage: "",
+  socialImage: "",
+  // Department placeholder colours (used as fallback when no image)
+  grayNicollsBats: "", cricketSpikes: "", adidasShoes: "", thighPads: "",
+  accessories: "", abdoGuards: "", matchBalls: "",
+  cricketBats: "", battingPads: "", battingGloves: "", helmets: "",
+  adultShoes: "", kidsShoes: "",
+  wicketKeeping: "", personalProtection: "", bagsLuggage: "", balls: "", clothing: "",
+  batProduct: "", glovesProduct: "", padsProduct: "", bagProduct: "",
 };
 
 // ─── Navigation Data ────────────────────────────────────────────────────────
@@ -56,6 +29,7 @@ export const SPORTS_NAV = [
   { label: "Tennis", href: "/tennis" },
   { label: "Padel", href: "/padel" },
   { label: "OUTLET", href: "/outlet" },
+  { label: "Stores", href: "/stores" },
 ];
 
 export const CRICKET_NAV = [
@@ -68,6 +42,7 @@ export const CRICKET_NAV = [
   { label: "Equipment", href: "/cricket/equipment" },
   { label: "Clothing", href: "/cricket/clothing" },
   { label: "Sale", href: "/cricket/sale", highlight: true },
+  { label: "Cricket Blogs", href: "/blogs/cricket" },
 ];
 
 // ─── Department Data ────────────────────────────────────────────────────────
@@ -159,14 +134,6 @@ export const OTHER_DEPARTMENTS = [
   },
 ];
 
-// ─── Trust Badges ───────────────────────────────────────────────────────────
-export const TRUST_BADGES = [
-  { id: 1, title: "Over 100,000 5 Star Reviews on Trustpilot", subtitle: "5 Star Reviews By Great Players", icon: ASSETS.trustpilot },
-  { id: 2, title: "Hassle Free Returns", subtitle: "Hassle Free Returns", icon: ASSETS.returnsIcon },
-  { id: 3, title: "100% Genuine Brands", subtitle: "100% Genuine Brands", icon: ASSETS.genuineIcon },
-  { id: 4, title: "Fast Dispatch, Worldwide Delivery", subtitle: "Fast Dispatch, Worldwide Delivery", icon: ASSETS.shippingIcon },
-  { id: 5, title: "Partnered with the PFA and ESFA", subtitle: "Partnered with the PFA and ESFA", icon: ASSETS.partnerIcon },
-];
 
 // ─── Products Data ──────────────────────────────────────────────────────────
 export interface Product {
