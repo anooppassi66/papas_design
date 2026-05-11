@@ -3,3 +3,4 @@
 CLAUDE.md
 .claude
 package-lock.json
+.env.local
