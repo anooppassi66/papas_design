@@ -259,10 +259,10 @@ export default function Footer() {
             <p className="text-[10px] text-white/40">
               © {new Date().getFullYear()} PAPAS Willow Cricket Store. All rights reserved.
             </p>
-            <div className="flex items-center gap-2">
-              <span className="text-[10px] text-white font-medium">Powered by</span>
-              <Image src="/keydos-logo.webp" alt="Keydos" width={80} height={28} className="opacity-90 hover:opacity-100 transition-opacity" />
-            </div>
+            <a href="https://www.kkeydos.com/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 group">
+              <span className="text-[10px] text-white font-medium group-hover:text-white/80 transition-colors">Powered by</span>
+              <Image src="/keydos-logo.webp" alt="Keydos" width={80} height={28} className="opacity-90 group-hover:opacity-100 transition-opacity" />
+            </a>
           </div>
         </div>
 
