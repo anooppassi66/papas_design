@@ -81,7 +81,7 @@ export default function HeroBanner() {
   const slide = slides[current] || STATIC_SLIDES[0];
 
   return (
-    <section className="relative w-full overflow-hidden select-none" style={{ height: "clamp(420px, 56vw, 760px)" }}
+    <section className="relative w-full overflow-hidden select-none" style={{ height: `calc(80vh - 40px)` }}
       onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}
       onTouchStart={onTouchStart} onTouchEnd={onTouchEnd} aria-label="Hero banner slider">
       {slides.map((s, idx) => (
@@ -97,12 +97,12 @@ export default function HeroBanner() {
         <Link href={slide.href} key={`cta-${current}`} className="pointer-events-auto inline-flex items-center justify-center px-7 py-3 rounded-full bg-white/20 backdrop-blur-[8px] border border-white/50 text-white text-[11px] md:text-[12px] font-semibold tracking-[0.12em] uppercase w-fit hover:bg-white hover:text-[#1e1e21] transition-all duration-300 ease-out drop-shadow-lg animate-[fadeSlideUp_0.7s_0.1s_ease_forwards] opacity-0" style={{ animationFillMode: "forwards" }}>{slide.cta}</Link>
       </div>
 
-      <button onClick={prev} aria-label="Previous slide" className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/30 backdrop-blur-[6px] border border-white/20 flex items-center justify-center text-white hover:bg-black/60 hover:border-white/50 transition-all duration-200" style={{ opacity: isPaused ? 1 : undefined }}>
+      {/* <button onClick={prev} aria-label="Previous slide" className="absolute left-4 md:left-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/30 backdrop-blur-[6px] border border-white/20 flex items-center justify-center text-white hover:bg-black/60 hover:border-white/50 transition-all duration-200" style={{ opacity: isPaused ? 1 : undefined }}>
         <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" /></svg>
       </button>
       <button onClick={next} aria-label="Next slide" className="absolute right-4 md:right-6 top-1/2 -translate-y-1/2 z-20 w-10 h-10 md:w-12 md:h-12 rounded-full bg-black/30 backdrop-blur-[6px] border border-white/20 flex items-center justify-center text-white hover:bg-black/60 hover:border-white/50 transition-all duration-200">
         <svg className="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" strokeWidth={2.5} viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
-      </button>
+      </button> */}
 
       {slides.length > 1 && (
         <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
@@ -114,9 +114,9 @@ export default function HeroBanner() {
         </div>
       )}
 
-      <div className="absolute top-4 right-4 md:top-5 md:right-6 z-20 text-white/60 text-[11px] font-mono tracking-[0.1em] bg-black/25 backdrop-blur-[4px] px-2.5 py-1 rounded-full">
+      {/* <div className="absolute top-4 right-4 md:top-5 md:right-6 z-20 text-white/60 text-[11px] font-mono tracking-[0.1em] bg-black/25 backdrop-blur-[4px] px-2.5 py-1 rounded-full">
         {String(current + 1).padStart(2, "0")} / {String(slides.length).padStart(2, "0")}
-      </div>
+      </div> */}
 
       <button onClick={() => setIsPaused((p) => !p)} aria-label={isPaused ? "Play" : "Pause"} className="absolute bottom-5 right-5 md:right-6 z-20 w-8 h-8 rounded-full bg-black/30 backdrop-blur-[6px] border border-white/20 flex items-center justify-center text-white/70 hover:text-white hover:bg-black/50 transition-all duration-200">
         {isPaused

@@ -255,13 +255,14 @@ export default function Footer() {
 
         {/* Bottom bar */}
         <div className="border-t border-white/10">
-          <div className="max-w-[1440px] mx-auto px-4 md:px-10 py-4 flex flex-col sm:flex-row items-center justify-between gap-2">
-            <p className="text-[10px] text-white/40 tracking-[0.45px] uppercase">
-              POWERED BY PAPAS CRICKET
-            </p>
+          <div className="max-w-[1440px] mx-auto px-4 md:px-10 py-3 flex flex-col sm:flex-row items-center justify-between gap-3">
             <p className="text-[10px] text-white/40">
               © {new Date().getFullYear()} PAPAS Willow Cricket Store. All rights reserved.
             </p>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] text-white font-medium">Powered by</span>
+              <Image src="/keydos-logo.webp" alt="Keydos" width={80} height={28} className="opacity-90 hover:opacity-100 transition-opacity" />
+            </div>
           </div>
         </div>
 
