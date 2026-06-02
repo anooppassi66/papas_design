@@ -18,6 +18,17 @@ const SUPPORT_EMAIL = "support@papaswillow.com.au";
 interface Address { id: number; line1: string; line2: string; city: string; state: string; pincode: string; is_default: boolean; }
 interface GiftCard { id: number; code: string; amount: number; balance: number; card_type: "purchased" | "received"; recipient_name: string; recipient_email: string; message: string; is_active: number; created_at: string; expires_at: string; }
 interface User { id: number; name: string; first_name: string; last_name: string; email: string; phone: string; }
+interface TrackingCheckpoint { message?: string; status_state?: string; occurred_at?: string; location?: string; description?: string; }
+interface TrackingInfo { tracking_state: string; tracking_state_label: string; tracking_page_url: string; courier_name: string; tracking_number: string; estimated_delivery: string | null; checkpoints: TrackingCheckpoint[]; last_synced: string | null; }
+
+const TRACKING_STATE_COLOR: Record<string, string> = {
+  in_transit: "text-blue-600 bg-blue-50 border-blue-200",
+  out_for_delivery: "text-purple-600 bg-purple-50 border-purple-200",
+  delivered: "text-green-600 bg-green-50 border-green-200",
+  picked_up: "text-indigo-600 bg-indigo-50 border-indigo-200",
+  failed_pickup: "text-red-500 bg-red-50 border-red-200",
+  lost: "text-red-500 bg-red-50 border-red-200",
+};
 
 const STATUS_STYLE: Record<string, string> = {
   pending:    "text-[#f69a39] bg-[#fff8f0] border-[#fcd34d]",
@@ -37,6 +48,9 @@ export default function AccountPage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [giftCards, setGiftCards] = useState<GiftCard[]>([]);
   const [returns, setReturns] = useState<ReturnRequest[]>([]);
+  const [trackingMap, setTrackingMap] = useState<Record<string, TrackingInfo | null>>({});
+  const [expandedTracking, setExpandedTracking] = useState<string | null>(null);
+  const [loadingTracking, setLoadingTracking] = useState<string | null>(null);
   const [returnModal, setReturnModal] = useState(false);
   const [returnOrderNo, setReturnOrderNo] = useState("");
   const [returnReason, setReturnReason] = useState(RETURN_REASONS[0]);
@@ -117,6 +131,17 @@ export default function AccountPage() {
   }
 
   function handleSignOut() { clearAuth(); setLoggedIn(false); setUser(null); setOrders([]); setAddresses([]); setGiftCards([]); setReturns([]); }
+
+  async function toggleTracking(orderNo: string) {
+    if (expandedTracking === orderNo) { setExpandedTracking(null); return; }
+    setExpandedTracking(orderNo);
+    if (trackingMap[orderNo] !== undefined) return; // already fetched
+    setLoadingTracking(orderNo);
+    try {
+      const data = await customerApi.get(`/tracking/${orderNo}/status`).catch(() => null);
+      setTrackingMap(prev => ({ ...prev, [orderNo]: data as TrackingInfo | null }));
+    } finally { setLoadingTracking(null); }
+  }
 
   function openReturnModal(orderNo: string) {
     setReturnOrderNo(orderNo);
@@ -335,6 +360,89 @@ export default function AccountPage() {
                             }`}>{existingReturn.status}</span>
                           </div>
                         )}
+
+                        {/* Track Order */}
+                        <div className="mt-3 pt-3 border-t border-[#f0f0f0]">
+                          <button onClick={() => toggleTracking(order.order_no)}
+                            className="flex items-center gap-1.5 text-[11px] font-semibold text-[#888] hover:text-[#f69a39] transition-colors">
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            {expandedTracking === order.order_no ? "Hide Tracking" : "Track Order"}
+                            <svg className={`w-3 h-3 transition-transform ${expandedTracking === order.order_no ? "rotate-180" : ""}`} fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+                          </button>
+
+                          {expandedTracking === order.order_no && (
+                            <div className="mt-3">
+                              {loadingTracking === order.order_no ? (
+                                <p className="text-[11px] text-[#888]">Loading tracking info…</p>
+                              ) : !trackingMap[order.order_no] ? (
+                                <p className="text-[11px] text-[#aaa]">No tracking information available yet. The admin will update this once your order is dispatched.</p>
+                              ) : (() => {
+                                const t = trackingMap[order.order_no]!;
+                                const PROGRESS = ["created","picked_up","in_transit","out_for_delivery","delivered"];
+                                const prog = Math.max(0, PROGRESS.indexOf(t.tracking_state));
+                                return (
+                                  <div className="space-y-3">
+                                    {/* Status + courier */}
+                                    <div className="flex flex-wrap items-center gap-2">
+                                      <span className={`text-[10px] font-semibold uppercase tracking-wide px-2 py-0.5 rounded-full border ${TRACKING_STATE_COLOR[t.tracking_state] || "bg-gray-50 text-gray-600 border-gray-200"}`}>
+                                        {t.tracking_state_label || t.tracking_state}
+                                      </span>
+                                      {t.courier_name && <span className="text-[11px] text-[#888]">{t.courier_name}</span>}
+                                      {t.tracking_number && <span className="text-[11px] font-mono text-[#888]">{t.tracking_number}</span>}
+                                    </div>
+
+                                    {t.estimated_delivery && (
+                                      <p className="text-[11px] text-[#888]">
+                                        <span className="font-semibold">Estimated delivery:</span> {new Date(t.estimated_delivery).toLocaleDateString("en-AU", { weekday: "short", day: "numeric", month: "short", year: "numeric" })}
+                                      </p>
+                                    )}
+
+                                    {/* Progress steps */}
+                                    <div className="flex items-center gap-0 py-1">
+                                      {["Created","Picked Up","In Transit","Out for Delivery","Delivered"].map((label, i) => (
+                                        <div key={i} className="flex items-center flex-1 min-w-0">
+                                          <div className="flex flex-col items-center">
+                                            <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center text-[8px] font-bold flex-shrink-0 ${i <= prog ? "bg-[#f69a39] border-[#f69a39] text-white" : "bg-white border-[#e5e5e5] text-[#ccc]"}`}>
+                                              {i < prog ? "✓" : i + 1}
+                                            </div>
+                                            <span className={`text-[8px] mt-0.5 text-center leading-tight w-12 ${i <= prog ? "text-[#f69a39] font-semibold" : "text-[#ccc]"}`}>{label}</span>
+                                          </div>
+                                          {i < 4 && <div className={`flex-1 h-px mb-4 ${i < prog ? "bg-[#f69a39]" : "bg-[#e5e5e5]"}`} />}
+                                        </div>
+                                      ))}
+                                    </div>
+
+                                    {/* Checkpoints */}
+                                    {t.checkpoints && t.checkpoints.length > 0 && (
+                                      <div className="space-y-2 border-t border-[#f0f0f0] pt-2">
+                                        {t.checkpoints.slice(0, 5).map((cp, i) => (
+                                          <div key={i} className="flex gap-2 text-[11px]">
+                                            <div className={`w-1.5 h-1.5 rounded-full mt-1.5 flex-shrink-0 ${i === 0 ? "bg-[#f69a39]" : "bg-[#ddd]"}`} />
+                                            <div>
+                                              <p className="text-[#444] font-medium">{cp.message || cp.description || cp.status_state}</p>
+                                              <p className="text-[#aaa] text-[10px]">
+                                                {cp.occurred_at && new Date(cp.occurred_at).toLocaleString("en-AU", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                                                {cp.location && ` · ${cp.location}`}
+                                              </p>
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    )}
+
+                                    {t.tracking_page_url && (
+                                      <a href={t.tracking_page_url} target="_blank" rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1 text-[11px] text-[#f69a39] hover:underline">
+                                        View full tracking on Easyship
+                                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+                                      </a>
+                                    )}
+                                  </div>
+                                );
+                              })()}
+                            </div>
+                          )}
+                        </div>
                       </div>
                       );
                     })}
