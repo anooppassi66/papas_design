@@ -2,9 +2,11 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { getCart, saveCart, updateCartQty, removeFromCart, cartTotal, CartItem, UPLOADS } from "@/lib/customerApi";
+import { getCart, saveCart, updateCartQty, removeFromCart, cartTotal, cartItemExtras, CartItem, UPLOADS, isLoggedIn } from "@/lib/customerApi";
+import { useRouter } from "next/navigation";
 
 export default function CartPage() {
+  const router = useRouter();
   const [items, setItems] = useState<CartItem[]>([]);
   const [promoCode, setPromoCode] = useState("");
   const [promoApplied, setPromoApplied] = useState(false);
@@ -81,6 +83,30 @@ export default function CartPage() {
                           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
                         </button>
                       </div>
+                      {/* Services */}
+                      {item.services && item.services.length > 0 && (
+                        <div className="mt-2 space-y-0.5">
+                          {item.services.map(s => (
+                            <p key={s.id} className="text-[11px] text-[#888] flex items-center gap-1">
+                              <span className="text-[#f69a39]">✦</span>
+                              <span className="font-medium">{s.category_name}:</span> {s.name} (+${s.price.toFixed(2)})
+                              <span className="ml-1 text-[10px] bg-blue-50 text-blue-600 px-1.5 py-0.5 rounded-full font-semibold">Booked later</span>
+                            </p>
+                          ))}
+                        </div>
+                      )}
+                      {/* Addons */}
+                      {item.addons && item.addons.length > 0 && (
+                        <div className="mt-1 space-y-0.5">
+                          {item.addons.map(a => (
+                            <p key={a.id} className="text-[11px] text-[#888] flex items-center gap-1">
+                              <span className="text-green-500">+</span>
+                              {a.name} (+${a.price.toFixed(2)})
+                              <span className="ml-1 text-[10px] bg-green-50 text-green-600 px-1.5 py-0.5 rounded-full font-semibold">Included</span>
+                            </p>
+                          ))}
+                        </div>
+                      )}
                       <div className="flex items-center justify-between mt-3">
                         <div className="flex items-center border border-[#e5e5e5] rounded-[3px]">
                           <button onClick={() => handleUpdateQty(item.product_variant_id, item.quantity - 1)} className="w-8 h-8 flex items-center justify-center text-[#888] hover:text-[#1e1e21]">
@@ -91,7 +117,7 @@ export default function CartPage() {
                             <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" /></svg>
                           </button>
                         </div>
-                        <p className="text-[#f69a39] font-bold text-[15px]">${(item.unit_price * item.quantity).toFixed(2)}</p>
+                        <p className="text-[#f69a39] font-bold text-[15px]">${((item.unit_price + cartItemExtras(item)) * item.quantity).toFixed(2)}</p>
                       </div>
                     </div>
                   </div>
@@ -129,9 +155,14 @@ export default function CartPage() {
                     <span>Total</span><span>${total.toFixed(2)}</span>
                   </div>
                 </div>
-                <Link href="/checkout" className="block w-full text-center mt-4 py-3.5 bg-[#f69a39] text-white font-semibold text-[13px] uppercase tracking-[0.5px] rounded-[3px] hover:bg-[#e8880d] transition-colors">
+                <button
+                  onClick={() => {
+                    if (isLoggedIn()) router.push("/checkout");
+                    else router.push("/account?redirect=/checkout");
+                  }}
+                  className="block w-full text-center mt-4 py-3.5 bg-[#f69a39] text-white font-semibold text-[13px] uppercase tracking-[0.5px] rounded-[3px] hover:bg-[#e8880d] transition-colors">
                   Proceed to Checkout
-                </Link>
+                </button>
                 <Link href="/products" className="block w-full text-center mt-2 py-2.5 border border-[#e5e5e5] text-[#888] text-[12px] font-medium rounded-[3px] hover:border-[#ccc] transition-colors">
                   Continue Shopping
                 </Link>

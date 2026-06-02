@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { getCart, CartItem, cartTotal, saveCart, isLoggedIn, customerApi } from "@/lib/customerApi";
+import { getCart, CartItem, cartTotal, cartItemExtras, saveCart, isLoggedIn, customerApi } from "@/lib/customerApi";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
 type Step = "delivery" | "payment" | "review";
@@ -42,8 +42,8 @@ export default function CheckoutPage() {
   const [cardErrors, setCardErrors] = useState({ number: "", expiry: "", cvv: "", name: "" });
 
   useEffect(() => {
+    if (!isLoggedIn()) { router.replace("/account?redirect=/checkout"); return; }
     setItems(getCart());
-    if (!isLoggedIn()) return;
 
     // Fetch fresh profile + default address in parallel
     Promise.all([
@@ -119,6 +119,8 @@ export default function CheckoutPage() {
           product_variant_id: i.product_variant_id,
           quantity: i.quantity,
           unit_price: i.unit_price,
+          services: i.services || [],
+          addons: i.addons || [],
         })),
         shipping: {
           name: `${delivery.firstName} ${delivery.lastName}`.trim(),
@@ -144,16 +146,49 @@ export default function CheckoutPage() {
   };
 
   if (placed) {
+    const hasServices = items.some(i => i.services && i.services.length > 0);
+    const hasAddons   = items.some(i => i.addons  && i.addons.length  > 0);
     return (
       <div className="bg-[#f4f4f4] min-h-screen flex items-center justify-center px-4 py-12">
-        <div className="bg-white rounded-[4px] border border-[#e8e8e8] p-10 text-center max-w-[480px] w-full shadow-sm">
-          <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
-            <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+        <div className="bg-white rounded-[4px] border border-[#e8e8e8] p-10 max-w-[520px] w-full shadow-sm">
+          <div className="text-center mb-6">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-5">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+            </div>
+            <h1 className="text-[22px] font-semibold text-[#1e1e21] mb-2">Order Confirmed!</h1>
+            <p className="text-[#888] text-[13px] mb-1">Thank you for your order.</p>
+            <p className="text-[#f69a39] font-bold text-[16px] font-mono mb-2">{orderNo}</p>
+            <p className="text-[12px] text-[#aaa]">A confirmation email will be sent to <strong>{delivery.email}</strong>.</p>
           </div>
-          <h1 className="text-[22px] font-semibold text-[#1e1e21] mb-2">Order Confirmed!</h1>
-          <p className="text-[#888] text-[13px] mb-1">Thank you for your order.</p>
-          <p className="text-[#f69a39] font-bold text-[16px] font-mono mb-6">{orderNo}</p>
-          <p className="text-[12px] text-[#aaa] mb-6">A confirmation email will be sent to <strong>{delivery.email}</strong>. We&apos;ll notify you when your order ships.</p>
+
+          {/* Service / addon notices */}
+          {(hasServices || hasAddons) && (
+            <div className="space-y-2 mb-6">
+              {hasServices && (
+                <div className="flex gap-3 p-3 bg-blue-50 border border-blue-100 rounded text-left">
+                  <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-screwdriver-wrench text-blue-500 text-[12px]" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-semibold text-blue-700 mb-0.5">Service Booking Confirmed</p>
+                    <p className="text-[11px] text-blue-600">Our team will contact you to schedule your service appointment. You can track the status in <strong>My Orders</strong>.</p>
+                  </div>
+                </div>
+              )}
+              {hasAddons && (
+                <div className="flex gap-3 p-3 bg-green-50 border border-green-100 rounded text-left">
+                  <div className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center flex-shrink-0">
+                    <i className="fa-solid fa-box text-green-500 text-[12px]" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-semibold text-green-700 mb-0.5">Add-ons Included</p>
+                    <p className="text-[11px] text-green-600">Your selected add-ons will be packed and shipped with your order.</p>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           <div className="flex gap-3">
             <Link href="/account" className="flex-1 py-3 border border-[#e5e5e5] text-[#888] text-[12px] font-semibold rounded-[3px] hover:border-[#ccc] transition-colors text-center">View Orders</Link>
             <Link href="/products" className="flex-1 py-3 bg-[#f69a39] text-white text-[12px] font-semibold rounded-[3px] hover:bg-[#e8880d] transition-colors text-center">Continue Shopping</Link>
@@ -237,10 +272,9 @@ export default function CheckoutPage() {
                     />
                   </div>
                   {[
-                    { label: "City",    key: "city" },
-                    { label: "State",   key: "state" },
+                    { label: "City",     key: "city" },
+                    { label: "State",    key: "state" },
                     { label: "Postcode", key: "postcode" },
-                    { label: "Country", key: "country" },
                   ].map(({ label, key }) => (
                     <div key={key}>
                       <label className="block text-[11px] font-semibold text-[#888] uppercase tracking-[0.5px] mb-1.5">{label} *</label>
@@ -251,6 +285,34 @@ export default function CheckoutPage() {
                       />
                     </div>
                   ))}
+                  <div>
+                    <label className="block text-[11px] font-semibold text-[#888] uppercase tracking-[0.5px] mb-1.5">Country *</label>
+                    <select
+                      required
+                      value={delivery.country}
+                      onChange={e => setDelivery(d => ({ ...d, country: e.target.value }))}
+                      className="w-full border border-[#e5e5e5] rounded-[3px] px-3 py-2.5 text-[13px] outline-none focus:border-[#f69a39] bg-white"
+                    >
+                      <option value="Australia">Australia</option>
+                      <option value="New Zealand">New Zealand</option>
+                      <option value="United Kingdom">United Kingdom</option>
+                      <option value="United States">United States</option>
+                      <option value="Canada">Canada</option>
+                      <option value="India">India</option>
+                      <option value="Pakistan">Pakistan</option>
+                      <option value="Sri Lanka">Sri Lanka</option>
+                      <option value="Bangladesh">Bangladesh</option>
+                      <option value="South Africa">South Africa</option>
+                      <option value="West Indies">West Indies</option>
+                      <option value="Afghanistan">Afghanistan</option>
+                      <option value="Ireland">Ireland</option>
+                      <option value="Zimbabwe">Zimbabwe</option>
+                      <option value="Singapore">Singapore</option>
+                      <option value="Malaysia">Malaysia</option>
+                      <option value="United Arab Emirates">United Arab Emirates</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
                 </div>
                 <button type="submit" className="mt-6 w-full py-3.5 bg-[#f69a39] text-white font-semibold text-[13px] uppercase tracking-[0.5px] rounded-[3px] hover:bg-[#e8880d] transition-colors">
                   Continue to Payment
@@ -369,16 +431,52 @@ export default function CheckoutPage() {
               <form onSubmit={handlePlaceOrder} className="bg-white rounded-[4px] border border-[#e8e8e8] p-6">
                 <h2 className="text-[15px] font-semibold text-[#1e1e21] uppercase tracking-wide mb-5">Review Your Order</h2>
                 <div className="space-y-3 mb-5">
-                  {items.map((item) => (
-                    <div key={item.product_variant_id} className="flex items-center justify-between gap-3 py-2 border-b border-[#f5f5f5]">
-                      <div className="flex-1">
-                        <p className="text-[13px] font-medium text-[#1e1e21]">{item.product_name}</p>
-                        <p className="text-[11px] text-[#888]">
-                          {item.variant_size && `Size: ${item.variant_size}`}{item.variant_size && item.variant_color && " · "}{item.variant_color}
-                          {" · "}Qty: {item.quantity}
+                  {items.map((item, idx) => (
+                    <div key={idx} className="py-3 border-b border-[#f5f5f5]">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1">
+                          <p className="text-[13px] font-medium text-[#1e1e21]">{item.product_name}</p>
+                          <p className="text-[11px] text-[#888]">
+                            {item.variant_size && `Size: ${item.variant_size}`}
+                            {item.variant_size && item.variant_color && " · "}
+                            {item.variant_color}
+                            {" · "}Qty: {item.quantity}
+                          </p>
+                        </div>
+                        <p className="text-[#f69a39] font-bold text-[14px] flex-shrink-0">
+                          ${((item.unit_price + cartItemExtras(item)) * item.quantity).toFixed(2)}
                         </p>
                       </div>
-                      <p className="text-[#f69a39] font-bold text-[14px]">${(item.unit_price * item.quantity).toFixed(2)}</p>
+                      {/* Services */}
+                      {item.services && item.services.length > 0 && (
+                        <div className="mt-2 ml-1 space-y-1">
+                          {item.services.map(s => (
+                            <div key={s.id} className="flex items-center justify-between">
+                              <p className="text-[11px] text-[#888] flex items-center gap-1.5">
+                                <span className="inline-block w-4 h-4 rounded-full bg-blue-100 text-blue-600 text-[9px] font-bold flex items-center justify-center flex-shrink-0">S</span>
+                                <span className="font-medium text-[#555]">{s.category_name}:</span> {s.name}
+                                <span className="bg-blue-50 text-blue-600 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ml-1">Booked later</span>
+                              </p>
+                              <p className="text-[11px] text-[#888] flex-shrink-0">+${s.price.toFixed(2)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Addons */}
+                      {item.addons && item.addons.length > 0 && (
+                        <div className="mt-1 ml-1 space-y-1">
+                          {item.addons.map(a => (
+                            <div key={a.id} className="flex items-center justify-between">
+                              <p className="text-[11px] text-[#888] flex items-center gap-1.5">
+                                <span className="inline-block w-4 h-4 rounded-full bg-green-100 text-green-600 text-[9px] font-bold flex items-center justify-center flex-shrink-0">A</span>
+                                {a.name}
+                                <span className="bg-green-50 text-green-600 text-[9px] font-semibold px-1.5 py-0.5 rounded-full ml-1">Included in shipment</span>
+                              </p>
+                              <p className="text-[11px] text-[#888] flex-shrink-0">+${a.price.toFixed(2)}</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

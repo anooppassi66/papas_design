@@ -19,6 +19,12 @@ async function request(method: string, path: string, body?: unknown): Promise<un
     body: isFormData ? body as FormData : body !== undefined ? JSON.stringify(body) : undefined,
   });
 
+  if (res.status === 401 && !path.startsWith("/auth/")) {
+    localStorage.removeItem("customer_token");
+    localStorage.removeItem("customer_user");
+    window.location.href = "/account?expired=1";
+    throw new Error("Session expired");
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error((err as { error?: string }).error || res.statusText);
@@ -55,6 +61,17 @@ export function isLoggedIn(): boolean {
 }
 
 // Cart helpers (localStorage-based)
+export interface CartService {
+  id: number;
+  name: string;
+  price: number;
+  category_name: string;
+}
+export interface CartAddon {
+  id: number;
+  name: string;
+  price: number;
+}
 export interface CartItem {
   product_id: number;
   product_variant_id: number;
@@ -64,8 +81,10 @@ export interface CartItem {
   brand_name: string;
   variant_size: string;
   variant_color: string;
-  unit_price: number;
+  unit_price: number;        // base product price only
   quantity: number;
+  services?: CartService[];  // booked later
+  addons?: CartAddon[];      // packed with shipment
 }
 
 export function getCart(): CartItem[] {
@@ -80,14 +99,12 @@ export function saveCart(items: CartItem[]) {
 
 export function addToCart(item: CartItem) {
   const cart = getCart();
-  const idx = cart.findIndex(
-    (c) => c.product_variant_id === item.product_variant_id
-  );
-  if (idx >= 0) {
-    cart[idx].quantity += item.quantity;
-  } else {
-    cart.push(item);
+  const hasExtras = (item.services?.length ?? 0) + (item.addons?.length ?? 0) > 0;
+  if (!hasExtras) {
+    const idx = cart.findIndex(c => c.product_variant_id === item.product_variant_id && !c.services?.length && !c.addons?.length);
+    if (idx >= 0) { cart[idx].quantity += item.quantity; saveCart(cart); return; }
   }
+  cart.push(item);
   saveCart(cart);
 }
 
@@ -102,8 +119,14 @@ export function updateCartQty(product_variant_id: number, quantity: number) {
   if (idx >= 0) { cart[idx].quantity = quantity; saveCart(cart); }
 }
 
+export function cartItemExtras(item: CartItem): number {
+  const svc = (item.services || []).reduce((s, x) => s + x.price, 0);
+  const add = (item.addons || []).reduce((s, x) => s + x.price, 0);
+  return svc + add;
+}
+
 export function cartTotal(items: CartItem[]): number {
-  return items.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+  return items.reduce((s, i) => s + (i.unit_price + cartItemExtras(i)) * i.quantity, 0);
 }
 
 export function cartCount(items: CartItem[]): number {

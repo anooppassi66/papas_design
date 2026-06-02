@@ -32,6 +32,7 @@ export default function AccountPage() {
   const [loggedIn, setLoggedIn] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [activeTab, setActiveTab] = useState<Tab>("orders");
+  const [sessionExpired, setSessionExpired] = useState(false);
   const [orders, setOrders] = useState<Order[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [giftCards, setGiftCards] = useState<GiftCard[]>([]);
@@ -51,6 +52,9 @@ export default function AccountPage() {
   const [profileSaved, setProfileSaved] = useState(false);
 
   useEffect(() => {
+    if (typeof window !== "undefined" && new URLSearchParams(window.location.search).get("expired") === "1") {
+      setSessionExpired(true);
+    }
     if (isLoggedIn()) {
       setLoggedIn(true);
       const u = getUser() as User | null;
@@ -80,6 +84,8 @@ export default function AccountPage() {
     try {
       const res = await customerApi.post("/auth/login", loginData) as { token: string; user: User };
       saveAuth(res.token, res.user);
+      const redirect = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("redirect") : null;
+      if (redirect) { window.location.href = redirect; return; }
       setUser(res.user); setLoggedIn(true);
       setProfileData({ first_name: res.user.first_name || "", last_name: res.user.last_name || "", phone: res.user.phone || "" });
       loadOrders(); loadAddresses();
@@ -144,6 +150,12 @@ export default function AccountPage() {
             <p className="text-[#888] text-[13px] mt-1">{showRegister ? "Join PAPAS Cricket today" : "Welcome back to PAPAS Cricket"}</p>
           </div>
           <div className="bg-white rounded-[4px] border border-[#e8e8e8] p-7 shadow-sm">
+            {sessionExpired && (
+              <div className="p-3 bg-amber-50 border border-amber-200 text-amber-700 text-[12px] rounded mb-4 flex items-center gap-2">
+                <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                Your session has expired. Please sign in again.
+              </div>
+            )}
             {authError && <div className="p-3 bg-red-50 text-red-600 text-[12px] rounded mb-4">{authError}</div>}
             {!showRegister ? (
               <form onSubmit={handleLogin} className="space-y-4">
