@@ -2,32 +2,44 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, CardElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { getCart, CartItem, cartTotal, cartItemExtras, saveCart, isLoggedIn, customerApi } from "@/lib/customerApi";
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5001/api";
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "");
+
 type Step = "delivery" | "payment" | "review";
 
-function fmtCard(v: string) {
-  return v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
-}
-function fmtExpiry(v: string) {
-  const d = v.replace(/\D/g, "").slice(0, 4);
-  return d.length > 2 ? `${d.slice(0, 2)}/${d.slice(2)}` : d;
-}
-function fmtCvv(v: string) {
-  return v.replace(/\D/g, "").slice(0, 4);
-}
+// ── Stripe CardElement styles matching the site ──
+const CARD_STYLE = {
+  style: {
+    base: {
+      fontSize: "13px",
+      color: "#1e1e21",
+      fontFamily: "inherit",
+      "::placeholder": { color: "#bbb" },
+    },
+    invalid: { color: "#e53e3e" },
+  },
+};
 
-export default function CheckoutPage() {
+function CheckoutInner() {
   const router = useRouter();
+  const stripe = useStripe();
+  const elements = useElements();
+
   const [step, setStep] = useState<Step>("delivery");
+  const [cardMounted, setCardMounted] = useState(false);
+  const [cardComplete, setCardComplete] = useState(false);
+  const [cardError, setCardError] = useState("");
+
   const [items, setItems] = useState<CartItem[]>([]);
   const [placed, setPlaced] = useState(false);
   const [orderNo, setOrderNo] = useState("");
   const [placingOrder, setPlacingOrder] = useState(false);
   const [orderError, setOrderError] = useState("");
 
-  // Gift card state
   const [gcInput, setGcInput] = useState("");
   const [gcApplied, setGcApplied] = useState<{ code: string; balance: number } | null>(null);
   const [gcValidating, setGcValidating] = useState(false);
@@ -38,22 +50,17 @@ export default function CheckoutPage() {
     address: "", city: "", state: "", postcode: "", country: "Australia",
   });
 
-  const [cardDetails, setCardDetails] = useState({ number: "", expiry: "", cvv: "", name: "" });
-  const [cardErrors, setCardErrors] = useState({ number: "", expiry: "", cvv: "", name: "" });
-
   useEffect(() => {
     if (!isLoggedIn()) { router.replace("/account?redirect=/checkout"); return; }
     setItems(getCart());
 
-    // Fetch fresh profile + default address in parallel
     Promise.all([
       customerApi.get("/auth/me").catch(() => null),
       customerApi.get("/auth/me/addresses").catch(() => null),
     ]).then(([me, addrs]) => {
       const u = me as { first_name?: string; last_name?: string; email?: string; phone?: string } | null;
-      const addresses = addrs as { line1?: string; line2?: string; city?: string; state?: string; pincode?: string; is_default?: boolean }[] | null;
+      const addresses = addrs as { line1?: string; city?: string; state?: string; pincode?: string; is_default?: boolean }[] | null;
       const def = addresses?.find(a => a.is_default) ?? addresses?.[0] ?? null;
-
       setDelivery(d => ({
         ...d,
         firstName: u?.first_name || d.firstName,
@@ -90,20 +97,15 @@ export default function CheckoutPage() {
     finally { setGcValidating(false); }
   }
 
-  function validateCard(): boolean {
-    const digits = cardDetails.number.replace(/\s/g, "");
-    const errs = {
-      number: digits.length < 16 ? "Enter a valid 16-digit card number" : "",
-      expiry: !/^\d{2}\/\d{2}$/.test(cardDetails.expiry) ? "Enter expiry as MM/YY" : "",
-      cvv:    cardDetails.cvv.length < 3 ? "Enter a valid CVV" : "",
-      name:   cardDetails.name.trim().length < 2 ? "Enter the name on your card" : "",
-    };
-    setCardErrors(errs);
-    return !Object.values(errs).some(Boolean);
+  function goToPayment() {
+    setCardMounted(true); // keep CardElement mounted from here on
+    setStep("payment");
   }
 
   function handlePaymentNext() {
-    if (validateCard()) setStep("review");
+    if (!cardComplete) { setCardError("Please complete your card details."); return; }
+    setCardError("");
+    setStep("review");
   }
 
   const handlePlaceOrder = async (e: React.FormEvent) => {
@@ -114,7 +116,7 @@ export default function CheckoutPage() {
     setPlacingOrder(true); setOrderError("");
     try {
       const result = await customerApi.post("/orders", {
-        items: items.map((i) => ({
+        items: items.map(i => ({
           product_id: i.product_id,
           product_variant_id: i.product_variant_id,
           quantity: i.quantity,
@@ -130,10 +132,43 @@ export default function CheckoutPage() {
           pincode: delivery.postcode,
           phone: delivery.phone,
         },
-        payment_method: "card",
+        payment_method: "stripe",
         tax_amount: tax,
         ...(gcApplied ? { gift_card_code: gcApplied.code, gift_card_amount: gcDiscount } : {}),
-      }) as { order_no: string };
+      }) as { order_no: string; client_secret: string | null };
+
+      // Confirm payment with Stripe if a payment intent was created
+      if (result.client_secret && stripe && elements) {
+        const cardElement = elements.getElement(CardElement);
+        if (!cardElement) { setOrderError("Card element not found. Please refresh and try again."); return; }
+
+        const { error: stripeError } = await stripe.confirmCardPayment(result.client_secret, {
+          payment_method: {
+            card: cardElement,
+            billing_details: {
+              name: `${delivery.firstName} ${delivery.lastName}`.trim(),
+              email: delivery.email,
+              phone: delivery.phone,
+              address: {
+                line1: delivery.address,
+                city: delivery.city,
+                state: delivery.state,
+                postal_code: delivery.postcode,
+                country: "AU",
+              },
+            },
+          },
+        });
+
+        if (stripeError) {
+          setOrderError(stripeError.message || "Payment failed. Please try again.");
+          setPlacingOrder(false);
+          return;
+        }
+
+        // Payment succeeded — mark order as paid
+        await customerApi.put(`/orders/${result.order_no}/confirm`, {});
+      }
 
       saveCart([]);
       setOrderNo(result.order_no);
@@ -161,7 +196,6 @@ export default function CheckoutPage() {
             <p className="text-[12px] text-[#aaa]">A confirmation email will be sent to <strong>{delivery.email}</strong>.</p>
           </div>
 
-          {/* Service / addon notices */}
           {(hasServices || hasAddons) && (
             <div className="space-y-2 mb-6">
               {hasServices && (
@@ -171,7 +205,7 @@ export default function CheckoutPage() {
                   </div>
                   <div>
                     <p className="text-[12px] font-semibold text-blue-700 mb-0.5">Service Booking Confirmed</p>
-                    <p className="text-[11px] text-blue-600">Our team will contact you to schedule your service appointment. You can track the status in <strong>My Orders</strong>.</p>
+                    <p className="text-[11px] text-blue-600">Our team will contact you to schedule your service appointment.</p>
                   </div>
                 </div>
               )}
@@ -234,18 +268,12 @@ export default function CheckoutPage() {
 
       <div className="max-w-[1440px] mx-auto px-4 md:px-10 py-6">
         <div className="flex flex-col lg:flex-row gap-6">
-          {/* Form area */}
           <div className="flex-1">
 
             {/* ── Step 1: Delivery ── */}
             {step === "delivery" && (
-              <form onSubmit={e => { e.preventDefault(); setStep("payment"); }} className="bg-white rounded-[4px] border border-[#e8e8e8] p-6">
+              <form onSubmit={e => { e.preventDefault(); goToPayment(); }} className="bg-white rounded-[4px] border border-[#e8e8e8] p-6">
                 <h2 className="text-[15px] font-semibold text-[#1e1e21] uppercase tracking-wide mb-5">Delivery Information</h2>
-                {!isLoggedIn() && (
-                  <div className="p-3 bg-[#fff8f0] border border-[#f69a39]/30 rounded text-[12px] text-[#888] mb-4">
-                    <Link href="/account" className="text-[#f69a39] font-semibold">Sign in</Link> to auto-fill your details and track your order.
-                  </div>
-                )}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {[
                     { label: "First Name", key: "firstName", type: "text" },
@@ -272,8 +300,8 @@ export default function CheckoutPage() {
                     />
                   </div>
                   {[
-                    { label: "City",     key: "city" },
-                    { label: "State",    key: "state" },
+                    { label: "City", key: "city" },
+                    { label: "State", key: "state" },
                     { label: "Postcode", key: "postcode" },
                   ].map(({ label, key }) => (
                     <div key={key}>
@@ -288,29 +316,13 @@ export default function CheckoutPage() {
                   <div>
                     <label className="block text-[11px] font-semibold text-[#888] uppercase tracking-[0.5px] mb-1.5">Country *</label>
                     <select
-                      required
-                      value={delivery.country}
+                      required value={delivery.country}
                       onChange={e => setDelivery(d => ({ ...d, country: e.target.value }))}
                       className="w-full border border-[#e5e5e5] rounded-[3px] px-3 py-2.5 text-[13px] outline-none focus:border-[#f69a39] bg-white"
                     >
-                      <option value="Australia">Australia</option>
-                      <option value="New Zealand">New Zealand</option>
-                      <option value="United Kingdom">United Kingdom</option>
-                      <option value="United States">United States</option>
-                      <option value="Canada">Canada</option>
-                      <option value="India">India</option>
-                      <option value="Pakistan">Pakistan</option>
-                      <option value="Sri Lanka">Sri Lanka</option>
-                      <option value="Bangladesh">Bangladesh</option>
-                      <option value="South Africa">South Africa</option>
-                      <option value="West Indies">West Indies</option>
-                      <option value="Afghanistan">Afghanistan</option>
-                      <option value="Ireland">Ireland</option>
-                      <option value="Zimbabwe">Zimbabwe</option>
-                      <option value="Singapore">Singapore</option>
-                      <option value="Malaysia">Malaysia</option>
-                      <option value="United Arab Emirates">United Arab Emirates</option>
-                      <option value="Other">Other</option>
+                      {["Australia","New Zealand","United Kingdom","United States","Canada","India","Pakistan","Sri Lanka","Bangladesh","South Africa","West Indies","Afghanistan","Ireland","Zimbabwe","Singapore","Malaysia","United Arab Emirates","Other"].map(c => (
+                        <option key={c} value={c}>{c}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -320,108 +332,40 @@ export default function CheckoutPage() {
               </form>
             )}
 
-            {/* ── Step 2: Payment ── */}
-            {step === "payment" && (
-              <div className="bg-white rounded-[4px] border border-[#e8e8e8] p-6">
-                <h2 className="text-[15px] font-semibold text-[#1e1e21] uppercase tracking-wide mb-1">Payment Details</h2>
-                <p className="text-[11px] text-[#aaa] mb-5 flex items-center gap-1.5">
-                  <svg className="w-3.5 h-3.5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
-                  Secure payment — your card details are encrypted
-                </p>
+            {/* ── Step 2: Payment — CardElement stays mounted on review step too ── */}
+            {cardMounted && (
+              <div style={{ display: step === "payment" ? "block" : "none" }}>
+                <div className="bg-white rounded-[4px] border border-[#e8e8e8] p-6">
+                  <h2 className="text-[15px] font-semibold text-[#1e1e21] uppercase tracking-wide mb-1">Payment Details</h2>
+                  <p className="text-[11px] text-[#aaa] mb-5 flex items-center gap-1.5">
+                    <svg className="w-3.5 h-3.5 text-green-500" fill="currentColor" viewBox="0 0 20 20"><path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" /></svg>
+                    Secure payment powered by Stripe — your card details are never stored on our servers
+                  </p>
 
-                {/* Accepted cards */}
-                <div className="flex items-center gap-2 mb-5">
-                  {["VISA", "MC", "AMEX", "DISC"].map(c => (
-                    <span key={c} className="px-2 py-1 border border-[#e5e5e5] rounded text-[10px] font-bold text-[#888] bg-[#fafafa]">{c}</span>
-                  ))}
-                </div>
+                  <div className="flex items-center gap-2 mb-5">
+                    {["VISA", "MC", "AMEX"].map(c => (
+                      <span key={c} className="px-2 py-1 border border-[#e5e5e5] rounded text-[10px] font-bold text-[#888] bg-[#fafafa]">{c}</span>
+                    ))}
+                  </div>
 
-                <div className="space-y-4">
-                  {/* Card number */}
                   <div>
-                    <label className="block text-[11px] font-semibold text-[#888] uppercase tracking-[0.5px] mb-1.5">Card Number *</label>
-                    <div className="relative">
-                      <input
-                        value={cardDetails.number}
-                        onChange={e => {
-                          setCardDetails(d => ({ ...d, number: fmtCard(e.target.value) }));
-                          if (cardErrors.number) setCardErrors(e2 => ({ ...e2, number: "" }));
-                        }}
-                        placeholder="1234 5678 9012 3456"
-                        maxLength={19}
-                        inputMode="numeric"
-                        className={`w-full border rounded-[3px] px-3 py-2.5 text-[13px] font-mono outline-none transition-colors pr-10 ${cardErrors.number ? "border-red-400 focus:border-red-400" : "border-[#e5e5e5] focus:border-[#f69a39]"}`}
-                      />
-                      <svg className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[#ccc]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
-                      </svg>
+                    <label className="block text-[11px] font-semibold text-[#888] uppercase tracking-[0.5px] mb-2">Card Details *</label>
+                    <div className="border border-[#e5e5e5] rounded-[3px] px-3 py-3 focus-within:border-[#f69a39] transition-colors">
+                      <CardElement options={CARD_STYLE} onChange={e => {
+                        setCardComplete(e.complete);
+                        setCardError(e.error?.message || "");
+                      }} />
                     </div>
-                    {cardErrors.number && <p className="text-[11px] text-red-500 mt-1">{cardErrors.number}</p>}
+                    {cardError && <p className="text-[11px] text-red-500 mt-1.5">{cardError}</p>}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-4">
-                    {/* Expiry */}
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#888] uppercase tracking-[0.5px] mb-1.5">Expiry Date *</label>
-                      <input
-                        value={cardDetails.expiry}
-                        onChange={e => {
-                          setCardDetails(d => ({ ...d, expiry: fmtExpiry(e.target.value) }));
-                          if (cardErrors.expiry) setCardErrors(e2 => ({ ...e2, expiry: "" }));
-                        }}
-                        placeholder="MM/YY"
-                        maxLength={5}
-                        inputMode="numeric"
-                        className={`w-full border rounded-[3px] px-3 py-2.5 text-[13px] font-mono outline-none transition-colors ${cardErrors.expiry ? "border-red-400 focus:border-red-400" : "border-[#e5e5e5] focus:border-[#f69a39]"}`}
-                      />
-                      {cardErrors.expiry && <p className="text-[11px] text-red-500 mt-1">{cardErrors.expiry}</p>}
-                    </div>
-
-                    {/* CVV */}
-                    <div>
-                      <label className="block text-[11px] font-semibold text-[#888] uppercase tracking-[0.5px] mb-1.5">CVV *</label>
-                      <div className="relative">
-                        <input
-                          value={cardDetails.cvv}
-                          onChange={e => {
-                            setCardDetails(d => ({ ...d, cvv: fmtCvv(e.target.value) }));
-                            if (cardErrors.cvv) setCardErrors(e2 => ({ ...e2, cvv: "" }));
-                          }}
-                          placeholder="123"
-                          maxLength={4}
-                          inputMode="numeric"
-                          type="password"
-                          className={`w-full border rounded-[3px] px-3 py-2.5 text-[13px] outline-none transition-colors pr-8 ${cardErrors.cvv ? "border-red-400 focus:border-red-400" : "border-[#e5e5e5] focus:border-[#f69a39]"}`}
-                        />
-                        <svg className="absolute right-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#ccc]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                      </div>
-                      {cardErrors.cvv && <p className="text-[11px] text-red-500 mt-1">{cardErrors.cvv}</p>}
-                    </div>
+                  <div className="flex gap-3 mt-6">
+                    <button type="button" onClick={() => setStep("delivery")} className="px-6 py-3 border border-[#e5e5e5] text-[#888] text-[13px] font-semibold rounded-[3px] hover:border-[#ccc] transition-colors">Back</button>
+                    <button type="button" onClick={handlePaymentNext} disabled={!stripe}
+                      className="flex-1 py-3 bg-[#f69a39] text-white font-semibold text-[13px] uppercase tracking-[0.5px] rounded-[3px] hover:bg-[#e8880d] disabled:opacity-50 transition-colors">
+                      Review Order
+                    </button>
                   </div>
-
-                  {/* Name on card */}
-                  <div>
-                    <label className="block text-[11px] font-semibold text-[#888] uppercase tracking-[0.5px] mb-1.5">Name on Card *</label>
-                    <input
-                      value={cardDetails.name}
-                      onChange={e => {
-                        setCardDetails(d => ({ ...d, name: e.target.value }));
-                        if (cardErrors.name) setCardErrors(e2 => ({ ...e2, name: "" }));
-                      }}
-                      placeholder={`${delivery.firstName} ${delivery.lastName}`.trim() || "Cardholder Name"}
-                      className={`w-full border rounded-[3px] px-3 py-2.5 text-[13px] outline-none transition-colors ${cardErrors.name ? "border-red-400 focus:border-red-400" : "border-[#e5e5e5] focus:border-[#f69a39]"}`}
-                    />
-                    {cardErrors.name && <p className="text-[11px] text-red-500 mt-1">{cardErrors.name}</p>}
-                  </div>
-                </div>
-
-                <div className="flex gap-3 mt-6">
-                  <button onClick={() => setStep("delivery")} className="px-6 py-3 border border-[#e5e5e5] text-[#888] text-[13px] font-semibold rounded-[3px] hover:border-[#ccc] transition-colors">Back</button>
-                  <button onClick={handlePaymentNext} className="flex-1 py-3 bg-[#f69a39] text-white font-semibold text-[13px] uppercase tracking-[0.5px] rounded-[3px] hover:bg-[#e8880d] transition-colors">
-                    Review Order
-                  </button>
                 </div>
               </div>
             )}
@@ -430,6 +374,7 @@ export default function CheckoutPage() {
             {step === "review" && (
               <form onSubmit={handlePlaceOrder} className="bg-white rounded-[4px] border border-[#e8e8e8] p-6">
                 <h2 className="text-[15px] font-semibold text-[#1e1e21] uppercase tracking-wide mb-5">Review Your Order</h2>
+
                 <div className="space-y-3 mb-5">
                   {items.map((item, idx) => (
                     <div key={idx} className="py-3 border-b border-[#f5f5f5]">
@@ -447,7 +392,6 @@ export default function CheckoutPage() {
                           ${((item.unit_price + cartItemExtras(item)) * item.quantity).toFixed(2)}
                         </p>
                       </div>
-                      {/* Services */}
                       {item.services && item.services.length > 0 && (
                         <div className="mt-2 ml-1 space-y-1">
                           {item.services.map(s => (
@@ -462,7 +406,6 @@ export default function CheckoutPage() {
                           ))}
                         </div>
                       )}
-                      {/* Addons */}
                       {item.addons && item.addons.length > 0 && (
                         <div className="mt-1 ml-1 space-y-1">
                           {item.addons.map(a => (
@@ -481,7 +424,6 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
-                {/* Delivery summary */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
                   <div className="bg-[#fafafa] rounded p-4 text-[12px] space-y-0.5 text-[#444]">
                     <p className="font-semibold text-[#1e1e21] mb-2 text-[11px] uppercase tracking-wide">Delivery to</p>
@@ -493,17 +435,26 @@ export default function CheckoutPage() {
                   </div>
                   <div className="bg-[#fafafa] rounded p-4 text-[12px] space-y-0.5 text-[#444]">
                     <p className="font-semibold text-[#1e1e21] mb-2 text-[11px] uppercase tracking-wide">Payment</p>
-                    <p className="font-mono">•••• •••• •••• {cardDetails.number.replace(/\s/g, "").slice(-4)}</p>
-                    <p className="text-[#888]">Expires {cardDetails.expiry}</p>
-                    <p>{cardDetails.name}</p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <svg className="w-4 h-4 text-[#635bff]" viewBox="0 0 24 24" fill="currentColor"><path d="M13.976 9.15c-2.172-.806-3.356-1.426-3.356-2.409 0-.831.683-1.305 1.901-1.305 2.227 0 4.515.858 6.09 1.631l.89-5.494C18.252.975 15.697 0 12.165 0 9.667 0 7.589.654 6.104 1.872 4.56 3.147 3.757 4.992 3.757 7.218c0 4.039 2.467 5.76 6.476 7.219 2.585.92 3.445 1.574 3.445 2.583 0 .98-.84 1.545-2.354 1.545-1.875 0-4.965-.921-6.99-2.109l-.9 5.555C5.175 22.99 8.385 24 11.714 24c2.641 0 4.843-.624 6.328-1.813 1.664-1.305 2.525-3.236 2.525-5.732 0-4.128-2.524-5.851-6.591-7.305z"/></svg>
+                      <p className="text-[#635bff] font-semibold text-[11px]">Secured by Stripe</p>
+                    </div>
+                    <p className="text-[#888] text-[11px] mt-1">Card details encrypted end-to-end</p>
                   </div>
                 </div>
 
-                {orderError && <div className="p-3 bg-red-50 text-red-600 text-[12px] rounded mb-4">{orderError}</div>}
+                {orderError && <div className="p-3 bg-red-50 text-red-600 text-[12px] rounded mb-4 border border-red-200">{orderError}</div>}
+
                 <div className="flex gap-3">
                   <button type="button" onClick={() => setStep("payment")} className="px-6 py-3 border border-[#e5e5e5] text-[#888] text-[13px] font-semibold rounded-[3px] hover:border-[#ccc] transition-colors">Back</button>
-                  <button type="submit" disabled={placingOrder} className="flex-1 py-3 bg-[#f69a39] text-white font-semibold text-[13px] uppercase tracking-[0.5px] rounded-[3px] hover:bg-[#e8880d] disabled:opacity-60 transition-colors">
-                    {placingOrder ? "Placing Order…" : `Place Order · $${total.toFixed(2)}`}
+                  <button type="submit" disabled={placingOrder || !stripe}
+                    className="flex-1 py-3 bg-[#f69a39] text-white font-semibold text-[13px] uppercase tracking-[0.5px] rounded-[3px] hover:bg-[#e8880d] disabled:opacity-60 transition-colors">
+                    {placingOrder ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z"/></svg>
+                        Processing…
+                      </span>
+                    ) : `Place Order · $${total.toFixed(2)}`}
                   </button>
                 </div>
               </form>
@@ -526,7 +477,6 @@ export default function CheckoutPage() {
                 </div>
               </div>
 
-              {/* Gift card */}
               <div className="border-t border-[#f0f0f0] pt-4">
                 <p className="text-[11px] font-semibold text-[#888] uppercase tracking-wide mb-2">Gift Card</p>
                 {gcApplied ? (
@@ -564,5 +514,13 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Elements stripe={stripePromise}>
+      <CheckoutInner />
+    </Elements>
   );
 }
